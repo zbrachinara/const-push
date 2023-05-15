@@ -1,14 +1,9 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+//! Provides an arrayvec-like type which can be modified at const-time.
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+use std::mem::MaybeUninit;
+
+pub struct ConstVec<T, const CAP: usize> {
+    xs: [MaybeUninit<T>; CAP],
+    len: usize,
 }
