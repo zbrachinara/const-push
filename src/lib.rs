@@ -2,7 +2,7 @@
 
 use core::mem::ManuallyDrop;
 
-/// Essentially a [std::mem::MaybeUninit], but written for const contexts
+/// Essentially a [std::mem::MaybeUninit], but with externals exposed for const contexts
 union MaybeUninit<T> {
     uninit: (),
     value: ManuallyDrop<T>,
