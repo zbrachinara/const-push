@@ -1,7 +1,7 @@
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
-use std::{ops::Deref};
+use std::ops::Deref;
 
 pub struct CapacityError<T, const CAP: usize> {
     pub vector: ConstVec<T, CAP>,
@@ -47,6 +47,14 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    pub const fn get(&self, ix: usize) -> Option<&T> {
+        if ix < self.len {
+            Some(unsafe { core::mem::transmute(&self.xs[ix].value) })
+        } else {
+            None
+        }
+    }
+
     pub const fn push(self, item: T) -> Self {
         if self.len < CAP {
             unsafe { self.push_unchecked(item) }
@@ -54,6 +62,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
             panic!()
         }
     }
+
     pub const fn try_push(self, item: T) -> Result<Self, CapacityError<T, CAP>> {
         if self.len < CAP {
             unsafe { Ok(self.push_unchecked(item)) }

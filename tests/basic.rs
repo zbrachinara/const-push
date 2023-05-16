@@ -1,3 +1,5 @@
+use std::matches;
+
 use const_push::ConstVec;
 
 const fn basic_push_value() -> ConstVec<u32, 10> {
@@ -16,7 +18,10 @@ const fn drop_const_vec() {
 const DROP_CONST_VEC: () = drop_const_vec();
 
 const fn drop_const_vec_with_elems() {
-    ConstVec::<u32, 10>::new().push(10).push(20).push(30);
+    let c = ConstVec::<u32, 10>::new().push(10).push(20).push(30);
+    assert!(matches!(c.get(0), Some(&x) if x == 10));
+    assert!(matches!(c.get(1), Some(&x) if x == 20));
+    assert!(matches!(c.get(2), Some(&x) if x == 30));
 }
 #[allow(unused)]
 const DROP_CONST_VEC_WITH_ELEMS: () = drop_const_vec_with_elems();
