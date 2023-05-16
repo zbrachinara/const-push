@@ -1,6 +1,7 @@
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
+use std::ops::Deref;
 
 pub struct CapacityError<T, const CAP: usize> {
     vector: ConstVec<T, CAP>,
@@ -83,8 +84,31 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     }
 }
 
-// impl<T, const CAP: usize> Drop for ConstVec<T, CAP> {
-//     fn drop(&mut self) {
-//         unsafe { self.xs.as_mut_ptr().drop_in_place() }
-//     }
-// }
+pub struct ConstVecIter<'a, T, const N: usize> {
+    vec: &'a ConstVec<T, N>,
+    ix: usize,
+}
+
+impl<'a, T, const N: usize> IntoIterator for &'a ConstVec<T, N> {
+    type Item = &'a T;
+
+    type IntoIter = ConstVecIter<'a, T, N>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ConstVecIter { vec: self, ix: 0 }
+    }
+}
+
+impl<'a, T, const N: usize> Iterator for ConstVecIter<'a, T, N> {
+    type Item = &'a T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.ix < self.vec.len {
+            let res = unsafe { &self.vec.xs[self.ix].value }.deref();
+            self.ix += 1;
+            Some(res)
+        } else {
+            None
+        }
+    }
+}
