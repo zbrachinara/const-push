@@ -1,6 +1,6 @@
 //! Provides an arrayvec-like type which can be modified at const-time.
 
-use core::mem::ManuallyDrop;
+use core::{mem::ManuallyDrop, panic};
 
 pub struct CapacityError<T, const CAP: usize> {
     vector: ConstVec<T, CAP>,
@@ -39,6 +39,10 @@ pub struct ConstVec<T, const CAP: usize> {
 }
 
 impl<T, const CAP: usize> ConstVec<T, CAP> {
+    pub const fn into_iter(self) {
+        let Self { xs, len } = self;
+    }
+
     pub const fn new() -> Self {
         Self {
             xs: unsafe { MaybeUninit::uninit().assume_init() },
@@ -46,13 +50,13 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
-    pub const fn push(self, element: T) -> Self {
-        match self.try_push(element) {
-            Ok(v) => v,
-            Err(_) => panic!(),
+    pub const fn push(self, item: T) -> Self {
+        if self.len < CAP {
+            unsafe { self.push_unchecked(item) }
+        } else {
+            panic!()
         }
     }
-
     pub const fn try_push(self, item: T) -> Result<Self, CapacityError<T, CAP>> {
         if self.len < CAP {
             unsafe { Ok(self.push_unchecked(item)) }
@@ -63,7 +67,8 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
 
     pub const unsafe fn push_unchecked(mut self, item: T) -> Self {
         debug_assert!(self.len < CAP);
-        self.xs[self.len] = MaybeUninit { // TODO actually make this unchecked
+        self.xs[self.len] = MaybeUninit {
+            // TODO actually make this unchecked
             value: ManuallyDrop::new(item),
         };
         let len = self.len;
@@ -80,8 +85,6 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
 
 // impl<T, const CAP: usize> Drop for ConstVec<T, CAP> {
 //     fn drop(&mut self) {
-//         self.clear();
-
-//         // MaybeUninit inhibits array's drop
+//         unsafe { self.xs.as_mut_ptr().drop_in_place() }
 //     }
 // }
