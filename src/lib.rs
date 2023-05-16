@@ -1,11 +1,11 @@
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
-use std::ops::Deref;
+use std::{ops::Deref};
 
 pub struct CapacityError<T, const CAP: usize> {
-    vector: ConstVec<T, CAP>,
-    item: T,
+    pub vector: ConstVec<T, CAP>,
+    pub item: T,
 }
 
 impl<T, const CAP: usize> std::fmt::Debug for CapacityError<T, CAP> {
@@ -40,10 +40,6 @@ pub struct ConstVec<T, const CAP: usize> {
 }
 
 impl<T, const CAP: usize> ConstVec<T, CAP> {
-    pub const fn into_iter(self) {
-        let Self { xs, len } = self;
-    }
-
     pub const fn new() -> Self {
         Self {
             xs: unsafe { MaybeUninit::uninit().assume_init() },
