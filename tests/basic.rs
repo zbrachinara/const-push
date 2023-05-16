@@ -5,9 +5,7 @@ use const_push::ConstVec;
 
 const BASIC_PUSH: ConstVec<u32, 10> = basic_push_value();
 const fn basic_push_value() -> ConstVec<u32, 10> {
-    let vec = ConstVec::new();
-
-    vec   
+    ConstVec::new().push(10).push(20).push(30)
 }
 
 #[test]

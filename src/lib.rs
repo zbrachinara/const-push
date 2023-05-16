@@ -2,6 +2,19 @@
 
 use core::mem::ManuallyDrop;
 
+pub struct CapacityError<T, const CAP: usize> {
+    vector: ConstVec<T, CAP>,
+    item: T,
+}
+
+impl<T, const CAP: usize> std::fmt::Debug for CapacityError<T, CAP> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CapacityError")
+            .field("capacity", &CAP)
+            .finish()
+    }
+}
+
 /// Essentially a [std::mem::MaybeUninit], but with externals exposed for const contexts
 union MaybeUninit<T> {
     uninit: (),
@@ -33,13 +46,24 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
-    pub const fn push(self, item: T) -> Self {
-        todo!()
+    pub const fn push(self, element: T) -> Self {
+        match self.try_push(element) {
+            Ok(v) => v,
+            Err(_) => panic!(),
+        }
+    }
+
+    pub const fn try_push(self, item: T) -> Result<Self, CapacityError<T, CAP>> {
+        if self.len < CAP {
+            unsafe { Ok(self.push_unchecked(item)) }
+        } else {
+            Err(CapacityError { vector: self, item })
+        }
     }
 
     pub const unsafe fn push_unchecked(mut self, item: T) -> Self {
         debug_assert!(self.len < CAP);
-        self.xs[self.len] = MaybeUninit {
+        self.xs[self.len] = MaybeUninit { // TODO actually make this unchecked
             value: ManuallyDrop::new(item),
         };
         let len = self.len;
@@ -53,3 +77,11 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         self
     }
 }
+
+// impl<T, const CAP: usize> Drop for ConstVec<T, CAP> {
+//     fn drop(&mut self) {
+//         self.clear();
+
+//         // MaybeUninit inhibits array's drop
+//     }
+// }
