@@ -89,6 +89,23 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    pub const fn try_swap_remove(mut self, ix: usize) -> (Self, Option<T>) {
+        if self.len > 0 {
+            if ix == self.len - 1 {
+                self.try_pop()
+            } else {
+                unsafe {
+                    let removing = copy_item!(self<T>[ix]);
+                    let swapping = copy_item!(self<ManuallyDrop<T>>[self.len - 1]);
+                    self.xs[ix] = MaybeUninit { value: swapping };
+                    (self, Some(removing))
+                }
+            }
+        } else {
+            (self, None)
+        }
+    }
+
     pub const fn pop(mut self) -> (Self, T) {
         if self.len > 0 {
             let new_len = self.len - 1;
@@ -237,6 +254,15 @@ impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
     fn size_hint(&self) -> (usize, Option<usize>) {
         let len = self.len - self.ix;
         (len, Some(len))
+    }
+}
+
+impl<T, const CAP: usize> core::fmt::Debug for ConstVec<T, CAP>
+where
+    T: core::fmt::Debug,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_list().entries(self).finish()
     }
 }
 

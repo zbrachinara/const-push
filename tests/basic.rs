@@ -36,3 +36,29 @@ const POPPED_ELEM: u32 = pop_elems();
 fn test_popped_elem() {
     assert_eq!(POPPED_ELEM, 20)
 }
+
+const fn try_swap_remove() -> (ConstVec<u32, 10>, Option<u32>) {
+    ConstVec::new()
+        .push(10)
+        .push(20)
+        .push(30)
+        .push(40)
+        .try_swap_remove(1)
+}
+const TRY_SWAP_REMOVE_TEST: (ConstVec<u32, 10>, Option<u32>) = try_swap_remove();
+#[test]
+fn test_try_swap_remove() {
+    (&TRY_SWAP_REMOVE_TEST.0)
+        .into_iter()
+        .copied()
+        .zip([10, 40, 30])
+        .enumerate()
+        .for_each(|(ix, (const_constructed, test))| {
+            assert_eq!(
+                const_constructed, test,
+                "Elements at index {ix} do not match (list is {:?})", TRY_SWAP_REMOVE_TEST.0
+            )
+        });
+
+    assert_eq!(TRY_SWAP_REMOVE_TEST.1, Some(20))
+}
