@@ -42,12 +42,6 @@ pub struct ConstVec<T, const CAP: usize> {
     xs: [MaybeUninit<T>; CAP],
 }
 
-enum Assert<const COND: bool> {}
-
-trait IsTrue {}
-
-impl IsTrue for Assert<true> {}
-
 impl<T, const CAP: usize> ConstVec<T, CAP> {
     const T_SIZE: usize = std::mem::size_of::<T>();
 
