@@ -6,7 +6,7 @@ use std::ops::Deref;
 
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
 /// to the stack, not modifying the original index.
-/// 
+///
 /// # Safety
 ///
 /// At the time of writing, there are a lot of limitations around const. In this case, the relevant
@@ -20,7 +20,7 @@ use std::ops::Deref;
 /// And of course, since this function performs a copy of a non-copy type, you need to make sure
 /// that *the element at this index is never accessed as a `T` again*.
 macro_rules! copy_item {
-    ($self:ident, $ix:expr) => {{
+    ($self:ident, $ix:expr) => {unsafe {
         // we can't get a pointer to xs or self, but we can get one to a zst with the same address
         let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const T;
         // we have a pointer to our array now, but we need a pointer to the item's location
