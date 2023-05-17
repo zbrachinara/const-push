@@ -89,7 +89,21 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
-    pub const fn pop(mut self) -> (Self, Option<T>) {
+    pub const fn pop(mut self) -> (Self, T) {
+        if self.len > 0 {
+            let new_len = self.len - 1;
+            let item = unsafe {
+                let item = copy_item!(self<T>[new_len]);
+                self = self.set_len(new_len);
+                item
+            };
+            (self, item)
+        } else {
+            panic!()
+        }
+    }
+
+    pub const fn try_pop(mut self) -> (Self, Option<T>) {
         if self.len > 0 {
             let new_len = self.len - 1;
             let item = unsafe {
