@@ -81,6 +81,14 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    pub const fn len(&self) -> usize {
+        self.len
+    }
+
+    pub const fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+
     pub const fn get(&self, ix: usize) -> Option<&T> {
         if ix < self.len {
             Some(unsafe { core::mem::transmute(&self.xs[ix].value) })
@@ -98,6 +106,8 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
                     let removing = copy_item!(self<T>[ix]);
                     let swapping = copy_item!(self<ManuallyDrop<T>>[self.len - 1]);
                     self.xs[ix] = MaybeUninit { value: swapping };
+                    let len = self.len - 1;
+                    self = self.set_len(len);
                     (self, Some(removing))
                 }
             }
@@ -257,10 +267,7 @@ impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> core::fmt::Debug for ConstVec<T, CAP>
-where
-    T: core::fmt::Debug,
-{
+impl<T, const CAP: usize> core::fmt::Debug for ConstVec<T, CAP> where T: core::fmt::Debug {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self).finish()
     }

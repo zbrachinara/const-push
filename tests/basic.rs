@@ -48,6 +48,12 @@ const fn try_swap_remove() -> (ConstVec<u32, 10>, Option<u32>) {
 const TRY_SWAP_REMOVE_TEST: (ConstVec<u32, 10>, Option<u32>) = try_swap_remove();
 #[test]
 fn test_try_swap_remove() {
+    assert_eq!(
+        TRY_SWAP_REMOVE_TEST.0.len(),
+        3,
+        "Improper array length (list is {:?}",
+        TRY_SWAP_REMOVE_TEST.0
+    );
     (&TRY_SWAP_REMOVE_TEST.0)
         .into_iter()
         .copied()
@@ -56,7 +62,8 @@ fn test_try_swap_remove() {
         .for_each(|(ix, (const_constructed, test))| {
             assert_eq!(
                 const_constructed, test,
-                "Elements at index {ix} do not match (list is {:?})", TRY_SWAP_REMOVE_TEST.0
+                "Elements at index {ix} do not match (list is {:?})",
+                TRY_SWAP_REMOVE_TEST.0
             )
         });
 
