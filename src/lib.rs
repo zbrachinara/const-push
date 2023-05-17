@@ -38,6 +38,7 @@ impl<T> MaybeUninit<T> {
 #[repr(C)]
 pub struct ConstVec<T, const CAP: usize> {
     len: usize,
+    xs_addr: (),
     xs: [MaybeUninit<T>; CAP],
 }
 
@@ -47,6 +48,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     pub const fn new() -> Self {
         Self {
             xs: unsafe { MaybeUninit::uninit().assume_init() },
+            xs_addr: (),
             len: 0,
         }
     }
@@ -70,10 +72,8 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     /// which have [`UnsafeCell`]s in them (which shouldn't be hard anyway, given that const
     /// disallows heap allocations).
     pub const unsafe fn pop_unchecked(mut self) -> (Self, T) {
-        // we can't get a pointer to our array or self, so let's get a pointer to self.len first
-        let ptr_to_len = addr_of!(self.len) as *const u8;
-        // since self was defined as repr(C), we know exactly where self.xs is relative to self.len
-        let ptr_to_xs = ptr_to_len.add(core::mem::size_of::<usize>());
+        // we can't get a pointer to xs or self, but we can get a one to a zst with the same address 
+        let ptr_to_xs = addr_of!(self.xs_addr) as *const u8;
         // we have a pointer to our array now, but we need a pointer to the item's location
         let ptr_to_elem = ptr_to_xs.add(Self::T_SIZE * (self.len - 1));
         // now we have enough information to get a slice containing the item
