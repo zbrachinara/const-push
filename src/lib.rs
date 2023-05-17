@@ -61,27 +61,24 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
 
     /// # Safety
     ///
-    /// At the time of writing, const has a lot of limitations surrounding itself. In this case, the
-    /// relevant issues are that we are not allowed to get references to objects which may contain
-    /// [`UnsafeCell`]s, and thus we cannot immediately do a [`core::ptr::read`]; both `&self` and
-    /// `&self.xs` are impossible. There is a lot of weird code in here to get around this, but the
-    /// bottom line is that I don't know if this is actually a sound thing to do, and actually, with
-    /// pointer provenance I think it is completey unsound. However, if you still feel like using
-    /// this approach, I guess just avoid putting in types which have [`UnsafeCell`]s in them (which
-    /// shouldn't be hard anyway, given that const disallows heap allocations).
-    ///
+    /// At the time of writing, there are a lot of limitations around const. In this case, the
+    /// relevant issue is that we are not allowed to get references to objects which may contain
+    /// [`UnsafeCell`]s -- both `&self` and `&self.xs` are impossible. There is a lot of weird code
+    /// in here to get around this, but the bottom line is that I don't know if this is actually a
+    /// sound thing to do, and actually, with pointer provenance I think it is completey unsound.
+    /// However, if you still feel like using this approach, I guess just avoid putting in types
+    /// which have [`UnsafeCell`]s in them (which shouldn't be hard anyway, given that const
+    /// disallows heap allocations).
     pub const unsafe fn pop_unchecked(mut self) -> (Self, T) {
-        // let's do something *really* cursed
         // we can't get a pointer to our array or self, so let's get a pointer to self.len first
         let ptr_to_len = addr_of!(self.len) as *const u8;
         // since self was defined as repr(C), we know exactly where self.xs is relative to self.len
         let ptr_to_xs = ptr_to_len.add(core::mem::size_of::<usize>());
-        // we have a pointer to our array now, but what we really need is a pointer to the location
-        // the item we want to pop is in.
+        // we have a pointer to our array now, but we need a pointer to the item's location
         let ptr_to_elem = ptr_to_xs.add(Self::T_SIZE * (self.len - 1));
-        // now we have enough information to get a slice containing the item we want
+        // now we have enough information to get a slice containing the item
         let item_as_u8_slice = core::slice::from_raw_parts(ptr_to_elem as *const u8, Self::T_SIZE);
-        // we can now get the T that we've been waiting for this whole time
+        // and then use an improvised transmute_copy to obtain the item
         let item = std::ptr::read_unaligned(item_as_u8_slice as *const _ as *const T);
         // now that we aren't using the pointers anymore, reduce the length
         let len = self.len;
