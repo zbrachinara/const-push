@@ -1,7 +1,9 @@
+#![feature(generic_const_exprs)]
+#![feature(const_transmute_copy)]
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
-use std::ops::Deref;
+use std::{ops::Deref, ptr::addr_of};
 
 pub struct CapacityError<T, const CAP: usize> {
     pub vector: ConstVec<T, CAP>,
@@ -34,12 +36,21 @@ impl<T> MaybeUninit<T> {
     }
 }
 
+#[repr(C)]
 pub struct ConstVec<T, const CAP: usize> {
-    xs: [MaybeUninit<T>; CAP],
     len: usize,
+    xs: [MaybeUninit<T>; CAP],
 }
 
+enum Assert<const COND: bool> {}
+
+trait IsTrue {}
+
+impl IsTrue for Assert<true> {}
+
 impl<T, const CAP: usize> ConstVec<T, CAP> {
+    const T_SIZE: usize = std::mem::size_of::<T>();
+
     pub const fn new() -> Self {
         Self {
             xs: unsafe { MaybeUninit::uninit().assume_init() },
@@ -53,6 +64,55 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         } else {
             None
         }
+    }
+
+    /// # Safety
+    ///
+    /// At the time of writing, const has a lot of limitations surrounding itself. In this case, the
+    /// relevant issues are that we are not allowed to get references to objects which may contain
+    /// [`UnsafeCell`]s, and thus we cannot immediately do a [`core::ptr::read`]; both `&self` and
+    /// `&self.xs` are impossible. There is a lot of weird code in here to get around this, but the
+    /// bottom line is that I don't know if this is actually a sound thing to do, and actually, with
+    /// pointer provenance I think it is completey unsound. However, if you still feel like using
+    /// this approach, I guess just avoid putting in types which have [`UnsafeCell`]s in them (which
+    /// shouldn't be hard anyway, given that const disallows heap allocations).
+    ///
+    pub const unsafe fn pop_unchecked(mut self) -> (Self, T)
+    where
+        [(); Self::T_SIZE]:,
+    {
+        // let's do something *really* cursed
+        // we can't get a pointer to our array or self, so let's get a pointer to self.len first
+        let ptr_to_len = addr_of!(self.len);
+        // since self was defined as repr(C), we know exactly where self.xs is relative to self.len
+        #[allow(clippy::size_of_in_element_count)]
+        // clippy is going to complain (it rightfully should) because it thinks we are trying to
+        // index an array. We are actually trying to index a struct.
+        let ptr_to_xs = ptr_to_len.add(core::mem::size_of::<usize>());
+        // we have a pointer to our array now, but what we really need is a pointer to the location
+        // the item we want to pop is in.
+        let ptr_to_elem = ptr_to_xs.add(Self::T_SIZE * (self.len - 1));
+        // now we have enough information to get a slice containing the item we want
+        let item_as_u8_slice = core::slice::from_raw_parts(ptr_to_elem as *const u8, Self::T_SIZE);
+        // we don't want to convert this to &T, since that would just put us back where we started.
+        // Instead, we will copy the slice directly
+        let mut container = [0_u8; Self::T_SIZE];
+        // since copy_from_slice is not allowed (no &mut), and neither are iterators, we will fill
+        // container using a while loop
+        let mut ix = 0;
+        while ix < container.len() {
+            container[ix] = item_as_u8_slice[ix];
+            ix += 1;
+        }
+        // now that this element is copied out, and we aren't using the pointers anymore, reduce the
+        // length
+        let len = self.len;
+        self = self.set_len(len - 1);
+        // now let's get the T that we've been waiting for this whole time
+        // let item: T = core::mem::transmute(container);
+        let item = core::mem::transmute_copy(&container);
+
+        (self, item)
     }
 
     pub const fn push(self, item: T) -> Self {
