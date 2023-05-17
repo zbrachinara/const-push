@@ -1,6 +1,7 @@
 #![no_std]
-#![feature(const_ptr_read)] // TODO stable in 1.71.0
 //! Provides an arrayvec-like type which can be modified at const-time.
+//!
+//! Depends on the feature const_ptr_read, which is stable in the nightly rust version `1.71.0`.
 
 use core::ops::Deref;
 use core::{mem::ManuallyDrop, panic};
