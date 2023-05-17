@@ -4,6 +4,7 @@
 //! Depends on the feature const_ptr_read, which is stable in the nightly rust version `1.71.0`.
 
 use core::ops::Deref;
+use core::ptr::addr_of;
 use core::{mem::ManuallyDrop, panic};
 
 use tap::Tap;
@@ -87,6 +88,10 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
 
     pub const fn is_empty(&self) -> bool {
         self.len == 0
+    }
+
+    pub const fn as_slice(&self) -> &[T] {
+        unsafe { core::slice::from_raw_parts(addr_of!(self.xs_addr) as *const T, self.len) }
     }
 
     pub const fn get(&self, ix: usize) -> Option<&T> {
@@ -204,10 +209,10 @@ pub struct ConstVecIter<'a, T, const N: usize> {
 impl<'a, T, const N: usize> IntoIterator for &'a ConstVec<T, N> {
     type Item = &'a T;
 
-    type IntoIter = ConstVecIter<'a, T, N>;
+    type IntoIter = core::slice::Iter<'a, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        ConstVecIter { vec: self, ix: 0 }
+        self.as_slice().iter()
     }
 }
 
@@ -267,7 +272,10 @@ impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
     }
 }
 
-impl<T, const CAP: usize> core::fmt::Debug for ConstVec<T, CAP> where T: core::fmt::Debug {
+impl<T, const CAP: usize> core::fmt::Debug for ConstVec<T, CAP>
+where
+    T: core::fmt::Debug,
+{
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_list().entries(self).finish()
     }
