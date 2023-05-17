@@ -1,8 +1,9 @@
+#![no_std]
 #![feature(const_ptr_read)]
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
-use std::ops::Deref;
+use core::ops::Deref;
 
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
 /// to the stack, not modifying the original index.
@@ -37,8 +38,8 @@ pub struct CapacityError<T, const CAP: usize> {
     pub item: T,
 }
 
-impl<T, const CAP: usize> std::fmt::Debug for CapacityError<T, CAP> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<T, const CAP: usize> core::fmt::Debug for CapacityError<T, CAP> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("CapacityError")
             .field("capacity", &CAP)
             .finish()
@@ -71,7 +72,7 @@ pub struct ConstVec<T, const CAP: usize> {
 }
 
 impl<T, const CAP: usize> ConstVec<T, CAP> {
-    const T_SIZE: usize = std::mem::size_of::<T>();
+    const T_SIZE: usize = core::mem::size_of::<T>();
 
     pub const fn new() -> Self {
         Self {
