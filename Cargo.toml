@@ -5,9 +5,11 @@ edition = "2021"
 
 [features]
 smallvec = ["dep:smallvec"]
+arrayvec = ["dep:arrayvec"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 tap = "1"
 smallvec = {optional = true, version = "1"}
+arrayvec = {optional = true, default_features = false, version = "0.7"}

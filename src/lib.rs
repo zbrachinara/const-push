@@ -6,7 +6,6 @@
 use core::ops::Deref;
 use core::{mem::ManuallyDrop, panic};
 
-use smallvec::SmallVec;
 use tap::Tap;
 
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
@@ -230,6 +229,12 @@ impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
 #[cfg(feature = "smallvec")]
 impl<A: smallvec::Array, const N: usize> From<ConstVec<A::Item, N>> for smallvec::SmallVec<A> {
     fn from(value: ConstVec<A::Item, N>) -> Self {
-        SmallVec::new().tap_mut(|v| v.extend(value.into_iter()))
+        smallvec::SmallVec::new().tap_mut(|v| v.extend(value))
+    }
+}
+#[cfg(feature = "arrayvec")]
+impl<T, const N: usize> From<ConstVec<T, N>> for arrayvec::ArrayVec<T, N> {
+    fn from(value: ConstVec<T, N>) -> Self {
+        arrayvec::ArrayVec::new().tap_mut(|v| v.extend(value))
     }
 }
