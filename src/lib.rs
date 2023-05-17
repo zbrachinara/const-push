@@ -1,5 +1,5 @@
 #![feature(generic_const_exprs)]
-#![feature(const_transmute_copy)]
+#![feature(const_ptr_read)]
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::{mem::ManuallyDrop, panic};
@@ -100,7 +100,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         let len = self.len;
         self = self.set_len(len - 1);
         // now let's get the T that we've been waiting for this whole time
-        let item = core::mem::transmute_copy(&container);
+        let item = std::ptr::read_unaligned(&container as *const _ as *const T);
 
         (self, item)
     }
