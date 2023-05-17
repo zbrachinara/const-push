@@ -2,8 +2,8 @@
 #![feature(const_ptr_read)]
 //! Provides an arrayvec-like type which can be modified at const-time.
 
-use core::{mem::ManuallyDrop, panic};
 use core::ops::Deref;
+use core::{mem::ManuallyDrop, panic};
 
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
 /// to the stack, not modifying the original index.
@@ -21,15 +21,13 @@ use core::ops::Deref;
 /// And of course, since this function performs a copy of a non-copy type, you need to make sure
 /// that *the element at this index is never accessed as a `T` again*.
 macro_rules! copy_item {
-    ($self:ident, $ix:expr) => {unsafe {
+    ($self:ident<$item_type:ty>, $ix:expr) => {unsafe {
         // we can't get a pointer to xs or self, but we can get one to a zst with the same address
-        let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const T;
+        let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const $item_type;
         // we have a pointer to our array now, but we need a pointer to the item's location
         let ptr_to_elem = ptr_to_xs.add($ix);
-        // now we have enough information to get a slice containing the item
-        let item_as_u8_slice = core::slice::from_raw_parts(ptr_to_elem as *const u8, Self::T_SIZE);
-        // and then use an improvised transmute_copy to obtain the item
-        core::ptr::read_unaligned(item_as_u8_slice as *const _ as *const T)
+        // and then use a ptr read obtain the item
+        core::ptr::read_unaligned(ptr_to_elem)
     }};
 }
 
@@ -72,8 +70,6 @@ pub struct ConstVec<T, const CAP: usize> {
 }
 
 impl<T, const CAP: usize> ConstVec<T, CAP> {
-    const T_SIZE: usize = core::mem::size_of::<T>();
-
     pub const fn new() -> Self {
         Self {
             xs: unsafe { MaybeUninit::uninit().assume_init() },
@@ -102,7 +98,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     /// disallows heap allocations).
     pub const unsafe fn pop_unchecked(mut self) -> (Self, T) {
         let new_len = self.len - 1;
-        let item = copy_item!(self, new_len);
+        let item = copy_item!(self<T>, new_len);
         self = self.set_len(new_len);
         (self, item)
     }
