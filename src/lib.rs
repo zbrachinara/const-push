@@ -21,13 +21,13 @@ use core::{mem::ManuallyDrop, panic};
 /// And of course, since this function performs a copy of a non-copy type, you need to make sure
 /// that *the element at this index is never accessed as a `T` again*.
 macro_rules! copy_item {
-    ($self:ident<$item_type:ty>, $ix:expr) => {unsafe {
+    ($self:ident<$item_type:ty>[$ix:expr]) => {unsafe {
         // we can't get a pointer to xs or self, but we can get one to a zst with the same address
         let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const $item_type;
         // we have a pointer to our array now, but we need a pointer to the item's location
         let ptr_to_elem = ptr_to_xs.add($ix);
         // and then use a ptr read obtain the item
-        core::ptr::read_unaligned(ptr_to_elem)
+        core::ptr::read(ptr_to_elem)
     }};
 }
 
@@ -98,7 +98,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     /// disallows heap allocations).
     pub const unsafe fn pop_unchecked(mut self) -> (Self, T) {
         let new_len = self.len - 1;
-        let item = copy_item!(self<T>, new_len);
+        let item = copy_item!(self<T>[new_len]);
         self = self.set_len(new_len);
         (self, item)
     }
