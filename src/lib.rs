@@ -6,6 +6,9 @@
 use core::ops::Deref;
 use core::{mem::ManuallyDrop, panic};
 
+use smallvec::SmallVec;
+use tap::Tap;
+
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
 /// to the stack, not modifying the original index.
 ///
@@ -179,5 +182,44 @@ impl<'a, T, const N: usize> Iterator for ConstVecIter<'a, T, N> {
         } else {
             None
         }
+    }
+}
+
+pub struct ConstVecIntoIter<T, const CAP: usize> {
+    xs: [MaybeUninit<T>; CAP],
+    ix: usize,
+    len: usize,
+}
+
+impl<T, const CAP: usize> IntoIterator for ConstVec<T, CAP> {
+    type Item = T;
+
+    type IntoIter = ConstVecIntoIter<T, CAP>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        ConstVecIntoIter {
+            xs: self.xs,
+            ix: 0,
+            len: self.len,
+        }
+    }
+}
+
+impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
+    type Item = T;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        (self.ix < self.len).then(|| {
+            let item = core::mem::replace(&mut self.xs[self.ix], MaybeUninit::uninit());
+            self.ix += 1;
+            unsafe { item.assume_init() }
+        })
+    }
+}
+
+#[cfg(feature = "smallvec")]
+impl<A: smallvec::Array, const N: usize> From<ConstVec<A::Item, N>> for smallvec::SmallVec<A> {
+    fn from(value: ConstVec<A::Item, N>) -> Self {
+        SmallVec::new().tap_mut(|v| v.extend(value.into_iter()))
     }
 }
