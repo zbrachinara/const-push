@@ -77,11 +77,8 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     {
         // let's do something *really* cursed
         // we can't get a pointer to our array or self, so let's get a pointer to self.len first
-        let ptr_to_len = addr_of!(self.len);
+        let ptr_to_len = addr_of!(self.len) as *const u8;
         // since self was defined as repr(C), we know exactly where self.xs is relative to self.len
-        #[allow(clippy::size_of_in_element_count)]
-        // clippy is going to complain (it rightfully should) because it thinks we are trying to
-        // index an array. We are actually trying to index a struct.
         let ptr_to_xs = ptr_to_len.add(core::mem::size_of::<usize>());
         // we have a pointer to our array now, but what we really need is a pointer to the location
         // the item we want to pop is in.
@@ -103,7 +100,6 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         let len = self.len;
         self = self.set_len(len - 1);
         // now let's get the T that we've been waiting for this whole time
-        // let item: T = core::mem::transmute(container);
         let item = core::mem::transmute_copy(&container);
 
         (self, item)
