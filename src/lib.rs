@@ -183,6 +183,11 @@ impl<'a, T, const N: usize> Iterator for ConstVecIter<'a, T, N> {
             None
         }
     }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.vec.len - self.ix;
+        (len, Some(len))
+    }
 }
 
 pub struct ConstVecIntoIter<T, const CAP: usize> {
@@ -214,6 +219,11 @@ impl<T, const CAP: usize> Iterator for ConstVecIntoIter<T, CAP> {
             self.ix += 1;
             unsafe { item.assume_init() }
         })
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let len = self.len - self.ix;
+        (len, Some(len))
     }
 }
 
