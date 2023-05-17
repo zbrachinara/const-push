@@ -1,4 +1,4 @@
-use std::{matches, assert_eq};
+use std::{assert_eq, matches};
 
 use const_push::ConstVec;
 
@@ -26,14 +26,13 @@ const fn drop_const_vec_with_elems() {
 #[allow(unused)]
 const DROP_CONST_VEC_WITH_ELEMS: () = drop_const_vec_with_elems();
 
+const fn pop_elems() -> Option<u32> {
+    let c = ConstVec::<u32, 10>::new().push(10).push(20);
 
-const fn pop_elems() -> u32 {
-    let c = ConstVec::<u32,10>::new().push(10).push(20);
-
-    unsafe {c.pop_unchecked()}.1
+    c.pop().1
 }
-const POPPED_ELEM: u32 = pop_elems();
+const POPPED_ELEM: Option<u32> = pop_elems();
 #[test]
 fn test_popped_elem() {
-    assert_eq!(POPPED_ELEM, 20)
+    assert_eq!(POPPED_ELEM, Some(20))
 }

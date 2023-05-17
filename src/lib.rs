@@ -1,5 +1,5 @@
 #![no_std]
-#![feature(const_ptr_read)]
+#![feature(const_ptr_read)] // TODO stable in 1.71.0
 //! Provides an arrayvec-like type which can be modified at const-time.
 
 use core::ops::Deref;
@@ -21,7 +21,7 @@ use core::{mem::ManuallyDrop, panic};
 /// And of course, since this function performs a copy of a non-copy type, you need to make sure
 /// that *the element at this index is never accessed as a `T` again*.
 macro_rules! copy_item {
-    ($self:ident<$item_type:ty>[$ix:expr]) => {unsafe {
+    ($self:ident<$item_type:ty>[$ix:expr]) => {{
         // we can't get a pointer to xs or self, but we can get one to a zst with the same address
         let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const $item_type;
         // we have a pointer to our array now, but we need a pointer to the item's location
@@ -86,6 +86,20 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    pub const fn pop(mut self) -> (Self, Option<T>) {
+        if self.len > 0 {
+            let new_len = self.len - 1;
+            let item = unsafe {
+                let item = copy_item!(self<T>[new_len]);
+                self = self.set_len(new_len);
+                item
+            };
+            (self, Some(item))
+        } else {
+            (self, None)
+        }
+    }
+
     /// # Safety
     ///
     /// At the time of writing, there are a lot of limitations around const. In this case, the
@@ -97,6 +111,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     /// which have [`UnsafeCell`]s in them (which shouldn't be hard anyway, given that const
     /// disallows heap allocations).
     pub const unsafe fn pop_unchecked(mut self) -> (Self, T) {
+        debug_assert!(self.len > 0);
         let new_len = self.len - 1;
         let item = copy_item!(self<T>[new_len]);
         self = self.set_len(new_len);
