@@ -29,12 +29,45 @@ use tap::Tap;
 macro_rules! copy_item {
     ($self:ident<$item_type:ty>[$ix:expr]) => {{
         // we can't get a pointer to xs or self, but we can get one to a zst with the same address
-        let ptr_to_xs = core::ptr::addr_of!($self.xs_addr) as *const $item_type;
+        let ptr_to_xs = extract_addr!($self<$item_type>);
         // we have a pointer to our array now, but we need a pointer to the item's location
         let ptr_to_elem = ptr_to_xs.add($ix);
         // and then use a ptr read obtain the item
-        core::ptr::read(ptr_to_elem)
+        ::core::ptr::read(ptr_to_elem)
     }};
+}
+
+macro_rules! extract_addr {
+    ($self:ident<$item_type:ty>) => {
+        ::core::ptr::addr_of!($self.xs_addr) as *const $item_type
+    };
+}
+
+#[repr(C)]
+struct AddressExtractor<T, const N: usize> {
+    xs_addr: (),
+    xs: [T; N],
+}
+
+impl<T, const N: usize> AddressExtractor<T, N> {
+    const fn new(arr: [T; N]) -> Self {
+        Self {
+            xs: arr,
+            xs_addr: (),
+        }
+    }
+}
+
+// https://github.com/nvzqz/static-assertions-rs/issues/40#issuecomment-1458897730
+struct Leq<const LESSER: usize, const GREATER: usize>;
+
+impl<const LESSER: usize, const GREATER: usize> Leq<LESSER, GREATER> {
+    const CHECK: () = assert!(LESSER <= GREATER);
+
+    const fn new() -> Self {
+        let _ = Self::CHECK;
+        Self {}
+    }
 }
 
 pub struct CapacityError<T, const CAP: usize> {
@@ -84,11 +117,26 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
-    const fn from_uninit_exact(xs: [MaybeUninit<T>; CAP]) -> Self {
+    pub const fn from_array<const N: usize>(xs: [T; N]) -> Self {
+        Leq::<N, CAP>::new();
+
+        let addressor = AddressExtractor::new(xs);
+        let address = extract_addr!(addressor<MaybeUninit<T>>);
+        let mut buffer: [MaybeUninit<T>; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
+
+        let mut ix = 0;
+        while ix < N {
+            buffer[ix] = unsafe { address.add(ix).read() };
+            ix += 1;
+        }
+
+        // all elements have been copied to our own buffer
+        core::mem::forget(addressor);
+
         Self {
-            xs,
+            len: N,
             xs_addr: (),
-            len: CAP,
+            xs: buffer,
         }
     }
 
