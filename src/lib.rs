@@ -82,6 +82,14 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    const fn from_uninit_exact(xs: [MaybeUninit<T>; CAP]) -> Self {
+        Self {
+            xs,
+            xs_addr: (),
+            len: CAP,
+        }
+    }
+
     pub const fn len(&self) -> usize {
         self.len
     }
