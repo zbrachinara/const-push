@@ -1,7 +1,8 @@
 #![no_std]
 //! Provides an arrayvec-like type which can be modified at const-time.
 //!
-//! Depends on the feature const_ptr_read, which is stable in the nightly rust version `1.71.0`.
+//! Removing or swapping elements needs the crate feature `fake-move`, which depends on the lang
+//! feature `const_ptr_read`. This is stable in the nightly rust version `1.71.0`.
 
 use core::ops::Deref;
 use core::ptr::addr_of;
@@ -9,6 +10,7 @@ use core::{mem::ManuallyDrop, panic};
 
 use tap::Tap;
 
+#[cfg(feature = "fake-move")]
 /// This is a macro meant for internal use on `ConstVec`. It copies the element at the given index
 /// to the stack, not modifying the original index.
 ///
@@ -110,6 +112,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    #[cfg(feature = "fake-move")]
     pub const fn try_swap_remove(mut self, ix: usize) -> (Self, Option<T>) {
         if self.len > 0 {
             if ix == self.len - 1 {
@@ -129,6 +132,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    #[cfg(feature = "fake-move")]
     pub const fn pop(mut self) -> (Self, T) {
         if self.len > 0 {
             let new_len = self.len - 1;
@@ -143,6 +147,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    #[cfg(feature = "fake-move")]
     pub const fn try_pop(mut self) -> (Self, Option<T>) {
         if self.len > 0 {
             let new_len = self.len - 1;
@@ -157,6 +162,7 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
         }
     }
 
+    #[cfg(feature = "fake-move")]
     /// # Safety
     ///
     /// At the time of writing, there are a lot of limitations around const. In this case, the

@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [features]
+default = ["fake-move"]
+fake-move = []
 smallvec = ["dep:smallvec"]
 arrayvec = ["dep:arrayvec"]
 

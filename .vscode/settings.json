@@ -1,5 +1,5 @@
 {
     "rust-analyzer.cargo.features": [
-        "smallvec", "arrayvec"
+        "smallvec", "arrayvec", "fake-move"
     ]
 }
