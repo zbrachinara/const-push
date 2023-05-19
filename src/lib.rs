@@ -62,6 +62,11 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     }
 
     #[cfg(feature = "fake-move")]
+    pub const fn from_array_exact(xs_exact: [T;CAP]) -> Self {
+        Self::from_array(xs_exact)
+    }
+
+    #[cfg(feature = "fake-move")]
     pub const fn from_array<const N: usize>(xs: [T; N]) -> Self {
         assertions::Leq::<N, CAP>::assert();
 
