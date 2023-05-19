@@ -1,4 +1,3 @@
-#![no_std]
 //! Provides an arrayvec-like type which can be modified at const-time.
 //!
 //! Removing or swapping elements needs the crate feature `fake-move`, which depends on the lang
@@ -13,6 +12,8 @@ use tap::Tap;
 mod addressing;
 mod assertions;
 mod iter;
+#[cfg(feature = "fake-move")]
+mod array_extension;
 
 pub struct CapacityError<T, const CAP: usize> {
     pub vector: ConstVec<T, CAP>,
@@ -62,31 +63,25 @@ impl<T, const CAP: usize> ConstVec<T, CAP> {
     }
 
     #[cfg(feature = "fake-move")]
-    pub const fn from_array_exact(xs_exact: [T;CAP]) -> Self {
+    pub const fn from_array_exact(xs_exact: [T; CAP]) -> Self {
         Self::from_array(xs_exact)
     }
 
     #[cfg(feature = "fake-move")]
     pub const fn from_array<const N: usize>(xs: [T; N]) -> Self {
-        assertions::Leq::<N, CAP>::assert();
-
-        let addressor = addressing::AddressExtractor::new(xs);
-        let address = addressing::extract_addr!(addressor<MaybeUninit<T>>);
-        let mut buffer: [MaybeUninit<T>; CAP] = unsafe { MaybeUninit::uninit().assume_init() };
-
-        let mut ix = 0;
-        while ix < N {
-            buffer[ix] = unsafe { address.add(ix).read() };
-            ix += 1;
-        }
-
-        // all elements have been copied to our own buffer
-        core::mem::forget(addressor);
-
         Self {
             len: N,
             xs_addr: (),
-            xs: buffer,
+            xs: array_extension::extend_array(xs),
+        }
+    }
+
+    #[cfg(feature = "fake-move")]
+    pub const fn upgrade<const NEW_CAP: usize>(self) -> ConstVec<T, NEW_CAP> {
+        ConstVec {
+            len: self.len,
+            xs_addr: (),
+            xs: array_extension::extend_uninit_array(self.xs),
         }
     }
 
