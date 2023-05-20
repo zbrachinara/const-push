@@ -14,6 +14,7 @@ mod assertions;
 mod iter;
 #[cfg(feature = "fake-move")]
 mod array_extension;
+mod macro_new;
 
 pub struct CapacityError<T, const CAP: usize> {
     pub vector: ConstVec<T, CAP>,
