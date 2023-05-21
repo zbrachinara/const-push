@@ -13,5 +13,6 @@ arrayvec = ["dep:arrayvec"]
 
 [dependencies]
 tap = "1"
+cfg-if = "1"
 smallvec = {optional = true, version = "1"}
 arrayvec = {optional = true, default_features = false, version = "0.7"}
